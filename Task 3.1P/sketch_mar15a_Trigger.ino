@@ -2,36 +2,36 @@
 #include <Wire.h>
 #include <BH1750.h>   // Library for BH1750 light sensor
 
-// Create BH1750 object
+// -------- BH1750 --------
 BH1750 lightMeter;
 
-// WiFi credentials
+// -------- WiFi --------
 char ssid[] = "Manoj Krishna iphone";
 char pass[] = "manojkrishna";
 
-// WiFi client for IFTTT
 WiFiClient client;
 
-// Threshold in lux (BH1750 gives values in lux, not analog 0–1023)
-float threshold = 100.0;   // Adjust based on testing
+// -------- Thresholds (Hysteresis) --------
+float thresholdHigh = 110.0; // Sunlight ON
+float thresholdLow  = 90.0;  // Sunlight OFF
 
-// Sunlight state tracking
+// -------- State --------
 bool sunlight = false;
+
+// -------- Cooldown --------
+unsigned long lastTriggerTime = 0;
+const unsigned long cooldown = 60000; // 60 seconds
 
 void setup()
 {
   Serial.begin(9600);
 
-  // Start I2C communication
   Wire.begin();
-
-  // Initialize BH1750 sensor
   lightMeter.begin();
 
   pinMode(LED_BUILTIN, OUTPUT);
 
   Serial.println("Connecting to WiFi...");
-
   WiFi.begin(ssid, pass);
 
   while (WiFi.status() != WL_CONNECTED)
@@ -43,7 +43,7 @@ void setup()
   Serial.println("WiFi Connected");
 }
 
-// Function to trigger IFTTT when sunlight starts
+// -------- IFTTT Trigger: Sunlight START --------
 void sendSunlightStart()
 {
   if (client.connect("maker.ifttt.com", 80))
@@ -55,7 +55,7 @@ void sendSunlightStart()
   }
 }
 
-// Function to trigger IFTTT when sunlight stops
+// -------- IFTTT Trigger: Sunlight STOP --------
 void sendSunlightStop()
 {
   if (client.connect("maker.ifttt.com", 80))
@@ -69,14 +69,15 @@ void sendSunlightStop()
 
 void loop()
 {
-  // Read light intensity in lux
   float lightValue = lightMeter.readLightLevel();
 
   Serial.print("Light (lux): ");
   Serial.println(lightValue);
 
-  // Sunlight detected
-  if (lightValue >= threshold && sunlight == false)
+  unsigned long currentTime = millis();
+
+  // -------- Sunlight DETECTED --------
+  if (lightValue >= thresholdHigh && sunlight == false && (currentTime - lastTriggerTime > cooldown))
   {
     Serial.println("Sunlight detected");
 
@@ -85,10 +86,11 @@ void loop()
     sendSunlightStart();
 
     sunlight = true;
+    lastTriggerTime = currentTime;
   }
 
-  // Sunlight stopped
-  if (lightValue < threshold && sunlight == true)
+  // -------- Sunlight STOPPED --------
+  if (lightValue <= thresholdLow && sunlight == true && (currentTime - lastTriggerTime > cooldown))
   {
     Serial.println("Sunlight stopped");
 
@@ -97,6 +99,7 @@ void loop()
     sendSunlightStop();
 
     sunlight = false;
+    lastTriggerTime = currentTime;
   }
 
   delay(2000);
