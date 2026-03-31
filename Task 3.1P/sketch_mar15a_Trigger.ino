@@ -17,7 +17,7 @@ float threshold = 100.0;
 // Track current sunlight state
 bool sunlight = false;
 
-// Make sure emails are sent only once
+
 bool startSent = false;
 bool stopSent = false;
 
