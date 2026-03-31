@@ -13,7 +13,7 @@ WiFiClient client;
 
 // Simple light threshold
 float threshold = 100.0;
-
+float thresholdLow = 90;
 // Track current sunlight state
 bool sunlight = false;
 
