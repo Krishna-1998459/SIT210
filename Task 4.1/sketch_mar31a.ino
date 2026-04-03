@@ -3,8 +3,10 @@
 #define LED1 6
 #define LED2 7
 
+volatile bool motionDetected = false;  // updated by interrupt
 bool ledState = false;
 
+// runs once
 void setup() {
   Serial.begin(9600);
   delay(1000);
@@ -13,13 +15,19 @@ void setup() {
   pinMode(LED1, OUTPUT);
   pinMode(LED2, OUTPUT);
 
+  // attach interrupt to PIR
+  attachInterrupt(digitalPinToInterrupt(PIR), detectMotion, RISING);
+
   Serial.println("Motion setup");
 }
 
+// main loop
 void loop() {
-  int motion = digitalRead(PIR);
 
-  if (motion == HIGH) {
+  // if motion detected by interrupt
+  if (motionDetected) {
+    motionDetected = false;
+
     if (!ledState) {
       digitalWrite(LED1, HIGH);
       digitalWrite(LED2, HIGH);
@@ -28,6 +36,7 @@ void loop() {
     }
   } 
   else {
+    // no motion → turn off lights
     if (ledState) {
       digitalWrite(LED1, LOW);
       digitalWrite(LED2, LOW);
@@ -36,5 +45,9 @@ void loop() {
     }
   }
 
-  delay(1500);  // small delay for stability
+  delay(200);  // small delay
 }
+
+// interrupt function
+void detectMotion() {
+  motionDetected = true;  
